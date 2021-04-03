@@ -116,7 +116,8 @@ class FRC_Spider
      */
     public function grab_list_page()
     {
-        $option_id = !empty($_REQUEST['option_id']) ? sanitize_text_field($_REQUEST['option_id']) : 0;
+//        $option_id = !empty($_REQUEST['option_id']) ? sanitize_text_field($_REQUEST['option_id']) : 0;
+        $option_id = frc_sanitize_text('option_id', 0);
 
         $options = new FRC_Options();
         $option = $options->option($option_id);
@@ -144,6 +145,7 @@ class FRC_Spider
             $config->rules = $this->rulesFormat($option['collect_content_rules']);
             $detail = $this->_QlObject($config)->absoluteUrl($config)->downloadImage($config)->special($config)->query()->getDataAndRelease();
             $detail = array_merge($item, current($detail));
+            $this->paging($detail, $config);
             return $this->insert_article($detail, $option);
         })->getDataAndRelease();
 
@@ -183,9 +185,9 @@ class FRC_Spider
             }
 
             $page_count = explode('-', $history_page_number);
-            $page_count = count($page_count) == 2 ? range($page_count[0], $page_count[1]) : [(int)$page_count];
+            $page_count = count($page_count) == 2 ? range($page_count[0], $page_count[1]) : [(int)$page_count[0]];
 
-            if (!get_option(FRC_Validation::FRC_VALIDATION_SPONSORSHIP) && count($page_count) > 2){
+            if (!get_option(FRC_Validation::FRC_VALIDATION_SPONSORSHIP) && count($page_count) > 3){
                 return ['code' => FRC_ApiError::FAIL, 'msg' => FRC_Validation::FRC_HINT_F];
             }
 
@@ -212,6 +214,7 @@ class FRC_Spider
                     $config->rules = $this->rulesFormat($option['collect_content_rules']);
                     $detail = $this->_QlObject($config)->absoluteUrl($config)->downloadImage($config)->special($config)->query()->getDataAndRelease();
                     $detail = array_merge($item, current($detail));
+                    $this->paging($detail, $config);
                     return $this->insert_article($detail, $option);
                 })->getDataAndRelease();
                 $result['data'] = $article;
@@ -238,6 +241,7 @@ class FRC_Spider
                 $config->rules = $this->rulesFormat($option['collect_content_rules']);
                 $detail = $this->_QlObject($config)->absoluteUrl($config)->downloadImage($config)->query()->getDataAndRelease();
                 $detail = array_merge($item, current($detail));
+                $this->paging($detail, $config);
                 return $this->insert_article($detail, $option);
             })->getDataAndRelease();
             $articles['rolling'] = $history_page_number;
@@ -297,6 +301,7 @@ class FRC_Spider
             $config->pure = false;
             $detail = $this->_QlObject($config)->absoluteUrl($config)->downloadImage($config)->query()->getDataAndRelease();
             $detail = array_merge($item, current($detail));
+            $this->paging($detail, $config);
             return $this->insert_article($detail, $option);
         });
 
@@ -319,9 +324,9 @@ class FRC_Spider
             return $this->response(FRC_ApiError::SUCCESS, null, '请输入参数.');
         }
 
-        $articles = $this->_QlObject($config)->absoluteUrl($config)->query()->getDataAndRelease();
+        $detail = $this->_QlObject($config)->absoluteUrl($config)->query()->getDataAndRelease();
 
-        return $this->response(FRC_ApiError::SUCCESS, $articles, '调试完成, 请在F12中查看');
+        return $this->response(FRC_ApiError::SUCCESS, $detail, '调试完成, 请在F12中查看');
     }
 
 
@@ -350,11 +355,44 @@ class FRC_Spider
             $config->url = $url;
             $detail = $this->_QlObject($config)->absoluteUrl($config)->downloadImage($config)->special($config)->query()->getDataAndRelease();
             $detail = array_merge(['link' => $url], current($detail));
+            $this->paging($detail, $config);
+
             return $this->insert_article($detail, $option);
         });
 
 
         return ['message' => '处理完成', 'data' => $article];
+    }
+
+
+    /**
+     * @param $detail
+     * @param $config
+     */
+    private function paging(&$detail, $config)
+    {
+        $i = 1;
+        $maximum = 50;
+        $detail['paging'] = AbsoluteUrl::urlFormat($detail['paging'], $config->url); // url format
+        if (!empty($detail['paging'])) {
+            $config->url = $detail['paging'];
+            while (true) {
+                $pagging = $this->_QlObject($config)
+                    ->absoluteUrl($config)
+                    ->downloadImage($config)
+                    ->special($config)
+                    ->query()->getDataAndRelease();
+                $pagging = current($pagging);
+                $pagging['paging'] = AbsoluteUrl::urlFormat($pagging['paging'], $config->url);
+                $detail['content'] .= $pagging['content'];
+                if (empty($pagging['paging']) || $pagging['paging'] == $config->url || $i > $maximum) {
+                    break;
+                }
+                $config->url = AbsoluteUrl::urlFormat($pagging['paging'], $config->url); // url format
+                $detail['paging_'.$i] = $config->url;
+                $i++;
+            }
+        }
     }
 
 
@@ -413,6 +451,7 @@ class FRC_Spider
                 $config->rules = $this->rulesFormat($option['collect_content_rules']);
                 $detail = $this->_QlObject($config)->absoluteUrl($config)->downloadImage($config)->query()->getDataAndRelease();
                 $detail = array_merge($item, current($detail));
+                $this->paging($detail, $config);
 
                 return $this->insert_article($detail, $option);
             })->getDataAndRelease();
@@ -576,6 +615,10 @@ class FRC_Spider
         $data['link'] = $article['link'];
         $data['title'] = mb_substr($this->text_keyword_replace($article['title'], $option), 0, 120);
         $data['content'] = $this->text_keyword_replace($article['content'], $option);
+        $insertKeyword = get_option(FRC_Validation::FRC_VALIDATION_INSERT_KEYWORD);
+        if (!empty($insertKeyword) && json_decode($insertKeyword)->switch == 'open') {
+            $data['content'] = $this->insertKeywords($data['content'], $option);
+        }
         $data['message'] = 'Success.';
         $data['created_at'] = current_time('mysql');
         $data['updated_at'] = current_time('mysql');
@@ -585,6 +628,35 @@ class FRC_Spider
         }
 
         return $this->format($article, '入库失败、可能此条数据已经在数据库中存在了');
+    }
+
+
+    /**
+     * @param $txt
+     * @param $option
+     * @return string
+     */
+    protected function insertKeywords($txt, $option){
+        if (empty($option['collect_keywords'])){
+            return $txt;
+        }
+        $keywords = json_decode($option['collect_keywords']);
+        if (empty($keywords)){
+            return $txt;
+        }
+        $items = [];
+        foreach ($keywords as $keyword){
+            for ($i=0; $i<$keyword->count; $i++){
+                if (isset($keyword->link)){
+                    $item = sprintf('<a href="%s">%s</a>', $keyword->link, $keyword->title);
+                } else {
+                    $item = $keyword->title;
+                }
+                array_push($items, $item);
+            }
+        }
+
+        return randomInsertString($txt, $items);
     }
 
 
@@ -986,7 +1058,7 @@ function frc_spider()
                 <p class="p-tips-style"><?php esc_html_e(FRC_ApiError::FRC_TIPS[array_rand(FRC_ApiError::FRC_TIPS, 1)]); ?></p>
                 <div class="todo-and-author-class">
                     <div align="right" style="margin-top: 0px; float: right;">
-                        <img width="400" src="<?php frc_image('fat-rat-appreciates.jpeg'); ?>" />
+                        <img width="300" src="<?php frc_image('fat-rat-appreciates.jpeg'); ?>" />
                     </div>
                     <h4>胖鼠:</h4>
                     <ul>
@@ -998,9 +1070,10 @@ function frc_spider()
                         <li>胖鼠采集, 最重要的应该是新建一个规则并上手使用, 我觉得通过视频教程、文字教程的学习后, 20分钟就能就能搞定.</li>
                         <li>新建采集规则, 有默认的配置. 可一键导入, 无需等待, 即刻使用. 鼠友照葫芦画瓢即可.</li>
                         <li>欢迎鼠友给胖鼠采集<a href="https://www.fatrat.cn/bounty" target="_blank"> 赞赏</a>, 同时也可以给胖鼠采集插件<a href="https://wordpress.org/support/plugin/fat-rat-collect/reviews" target="_blank">五星好评</a>, 这也算对胖鼠采集无声的支持.</li>
-                        <li>胖鼠采集: 1群:454049736 2群:846069514 </li>
+                        <li>胖鼠采集: 1群:454049736(已满) 2群:846069514(已满) 3群(微信群): waxx-xxswnb 加胖鼠好友,或扫描下方二维码</li>
                         <li>胖鼠采集为开源学习交流, 严禁有任何违反国家法律的行为.</li>
                         <li>胖鼠采集 20181230</li>
+                        <li><img width="200" src="<?php frc_image('fat-rat-pswx.jpeg'); ?>" /></li>
                         <li><img src="<?php frc_image('fat-rat-128x128.png'); ?>" /></li>
                     </ul>
                     <hr />

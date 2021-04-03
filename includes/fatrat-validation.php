@@ -12,7 +12,7 @@
 
 class FRC_Validation {
 
-    private $url = 'https://api.fatrat.cn';
+    private $url = 'https://www.fatrat.cn';
 
     const FRC_API_CODE = '20';
     const FRC_INSERT_TIME = 'frc_install_time';
@@ -21,6 +21,7 @@ class FRC_Validation {
     const FRC_VALIDATION_DYNAMIC_FIELDS = 'frc_validation_dynamic_fields';
     const FRC_VALIDATION_AUTOMATIC_SAVE_PIC = 'frc_validation_automatic_save_pic';
     const FRC_VALIDATION_RELEASE_CONTROL = 'frc_validation_release_control';
+    const FRC_VALIDATION_INSERT_KEYWORD = 'frc_validation_insert_keyword';
     const FRC_VALIDATION_AUTO_TAGS = 'frc_validation_auto_tags';
     const FRC_VALIDATION_INNER_CHAIN = 'frc_validation_inner_chain';
     const FRC_VALIDATION_ALL_COLLECT = 'frc_validation_all_collect';
@@ -38,19 +39,20 @@ class FRC_Validation {
         'automatic-save-pic' => [self::FRC_VALIDATION_AUTOMATIC_SAVE_PIC, '1'],
         'sponsorship' => [self::FRC_VALIDATION_SPONSORSHIP, 'sponsorship'],
         'release-control' => [self::FRC_VALIDATION_RELEASE_CONTROL, '1'],
+        'insert-keyword' => [self::FRC_VALIDATION_INSERT_KEYWORD, '2'],
     ];
     const FRC_HINT_A = '感谢鼠友%s的赞助, %s为您充值%s次, 您剩余 %s 次';
     const FRC_HINT_B = '咣咣咣, 人品大爆发, 感谢鼠友%s为您带来翻倍奖励, %s本次为您充值%s次, 您剩余 %s 次';
     const FRC_HINT_C = '赞助鼠半小时只能为您支持一次哦.';
     const FRC_HINT_D = '鼠友你好, 感谢您的赞助支持, 胖鼠采集因您更美好.';
     const FRC_HINT_E = 'debugging功能剩余次数(%s)次';
-    const FRC_HINT_F = '分页采集占用系统资源, 页码不可大于2页';
+    const FRC_HINT_F = '分页采集占用系统资源, 单次采集页数不可大于3页, 赞助鼠友可以无限制哦';
     const FRC_HINT_G = '操作状态成功le.';
     const FRC_HINT_H = '您的debugging剩余次数太多了, 无需充值.';
     const FRC_HINT_J = '插件的发展需要您的支持, 感谢赞助.';
     const FRC_HINT_K = '网络连接失败, 请求超时, 如异常持续, 请联系胖鼠排查原因!';
-    const FRC_HINT_L = '保存完成, 已为您贴心准备默认发布配置, 如需自定义发布设置请在工具箱激活.';
-    const FRC_HINT_Z = '最多可创建5个配置哦';
+    const FRC_HINT_L = '保存完成, 已为您贴心设置默认发布配置, 如需发布到指定的分类 请赞助支持, 开源不易感谢支持.';
+    const FRC_HINT_Z = '非赞助鼠友最多可创建5个配置哦, 开源不易感谢支持';
 
     private $shutdownJson;
     private $openJson;
@@ -221,7 +223,7 @@ class FRC_Validation {
             $query['host'] = site_url();
             $query['token'] = $this->getAccessToken();
             $query['version'] = get_option('frc_db_version');
-            $http = (new \GuzzleHttp\Client())->request('post', $this->url.$uri, ['verify' => false, 'connect_timeout' => $timeout, 'form_params' => $query]);
+            $http = (new \GuzzleHttp\Client())->request('post', $this->url.'/api'.$uri, ['verify' => false, 'connect_timeout' => $timeout, 'form_params' => $query]);
             update_option('fat_rat_collect_api_code', $http->getStatusCode());
             return $http->getBody()->getContents();
         } catch (Exception $e) {

@@ -151,6 +151,7 @@
         var tmp_link = new Array();
         var tmp_title = new Array();
         var tmp_content = new Array();
+        var tmp_paging = new Array();
 
         tmp_link['a'] = $('input[name="collect_list_rule_link_a"]').val() != "" ? $('input[name="collect_list_rule_link_a"]').val() : null ;
         tmp_link['b'] = $('input[name="collect_list_rule_link_b"]').val() != "" ? $('input[name="collect_list_rule_link_b"]').val() : null ;
@@ -164,7 +165,10 @@
         tmp_content['b'] = $('input[name="collect_content_rule_content_b"]').val() != "" ? $('input[name="collect_content_rule_content_b"]').val() : null ;
         tmp_content['c'] = $('input[name="collect_content_rule_content_c"]').val() != "" ? $('input[name="collect_content_rule_content_c"]').val() : null ;
         tmp_content['d'] = $('input[name="collect_content_rule_content_d"]').val() != "" ? $('input[name="collect_content_rule_content_d"]').val() : null ;
-
+        tmp_paging['a'] = $('input[name="collect_content_rule_paging_a"]').val() != "" ? $('input[name="collect_content_rule_paging_a"]').val() : null ;
+        tmp_paging['b'] = $('input[name="collect_content_rule_paging_b"]').val() != "" ? $('input[name="collect_content_rule_paging_b"]').val() : null ;
+        tmp_paging['c'] = $('input[name="collect_content_rule_paging_c"]').val() != "" ? $('input[name="collect_content_rule_paging_c"]').val() : null ;
+        tmp_paging['d'] = $('input[name="collect_content_rule_paging_d"]').val() != "" ? $('input[name="collect_content_rule_paging_d"]').val() : null ;
 
         var options = {
             action_func: 'save_option',
@@ -181,11 +185,12 @@
             collect_list_range: $('input[name="collect_list_range"]').val(),
             collect_list_rules: tmp_link['a'] + '%' + tmp_link['b'] + '|' + tmp_link['c'] + '|' + tmp_link['d'],
             collect_content_range: $('input[name="collect_content_range"]').val(),
-            collect_content_rules: tmp_title['a'] + '%' + tmp_title['b'] + '|' + tmp_title['c'] + '|' + tmp_title['d'] + ')(' + tmp_content['a'] + '%' + tmp_content['b'] + '|' + tmp_content['c'] + '|' + tmp_content['d'],
+            collect_content_rules: tmp_title['a'] + '%' + tmp_title['b'] + '|' + tmp_title['c'] + '|' + tmp_title['d'] + ')(' + tmp_content['a'] + '%' + tmp_content['b'] + '|' + tmp_content['c'] + '|' + tmp_content['d'] + ')(' + tmp_paging['a'] + '%' + tmp_paging['b'] + '|' + tmp_paging['c'] + '|' + tmp_paging['d'],
             collect_image_attribute: $('input[name="collect_image_attribute"]').val(),
             collect_custom_content_head: $('textarea[name="collect_custom_content_head"]').val(),
             collect_custom_content_foot: $('textarea[name="collect_custom_content_foot"]').val(),
             collect_keywords_replace_rule: $('textarea[name="collect_keywords_replace_rule"]').val(),
+            collect_keywords: $('textarea[name="collect_keywords"]').val(),
         }
         ajax_option_request_tool(request_url, options, success_redirect_url);
     });
@@ -373,6 +378,13 @@
 
     $('#todo—more-button').on('click', function(){
         $('.todo-more-show').attr("style","display:block;");
+    });
+
+    $('#keywords_default').on('click', function(){
+        $('textarea[name="collect_keywords"]').html('[\n' +
+            '    {"count":"1", "title":"胖鼠"},\n' +
+            '    {"count":"2", "title":"胖鼠采集", "link":"https://www.fatrat.cn"}\n' +
+            ']');
     });
 
     $('input[type=radio][name=collect_type]').change(function () {

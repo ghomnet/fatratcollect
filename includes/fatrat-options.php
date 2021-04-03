@@ -180,6 +180,7 @@ class FRC_Options
         $collect_custom_content_head  = !empty($_REQUEST['collect_custom_content_head']) ? esc_html($_REQUEST['collect_custom_content_head']) : '';
         $collect_custom_content_foot  = !empty($_REQUEST['collect_custom_content_foot']) ? esc_html($_REQUEST['collect_custom_content_foot']) : '';
         $collect_keywords_replace_rule  = !empty($_REQUEST['collect_keywords_replace_rule']) ? sanitize_text_field($_REQUEST['collect_keywords_replace_rule']) : '';
+        $collect_keywords  = frc_sanitize_text('collect_keywords', '');
 
         if ($collect_name == ''){
             return ['code' => FRC_ApiError::FAIL, 'msg' => '给你的配置写个名字吧, 着啥急'];
@@ -194,6 +195,9 @@ class FRC_Options
         }
         if (empty($collect_content_range) || empty($collect_content_rules)){
             return ['code' => FRC_ApiError::FAIL, 'msg' => '详情采集范围/采集规则为空.'];
+        }
+        if ($collect_keywords != '' && !json_decode($collect_keywords)){
+            return ['code' => FRC_ApiError::FAIL, 'msg' => '关键词随机插入Json错误'];
         }
 
         $params = [
@@ -213,6 +217,7 @@ class FRC_Options
             'collect_image_attribute' => $collect_image_attribute,
             'collect_custom_content' => json_encode(['head' => $collect_custom_content_head, 'foot' => $collect_custom_content_foot]),
             'collect_keywords_replace_rule' => $collect_keywords_replace_rule,
+            'collect_keywords' => $collect_keywords,
             'created_at' => current_time('mysql'),
             'updated_at' => current_time('mysql'),
         ];
@@ -358,6 +363,18 @@ class FRC_Options
                 'collect_content_rules' => 'title%h1|text|null)(content%div[class=content]|html|null',
                 'collect_image_attribute' => 'src',
                 'collect_remove_head' => '1',
+                'collect_charset' => 'utf-8',
+                'created_at' => current_time('mysql'),
+                'updated_at' => current_time('mysql'),
+            ],
+            [
+                'collect_name' => '胖鼠采集-小故事',
+                'collect_describe' => '内容分页采集例子 http://www.xigushi.com/aqgs/3262.html',
+                'collect_type' => 'single',
+                'collect_content_range' => '.by',
+                'collect_content_rules' => 'title%h1|text|null)(content%dl>dd>p|html|a)(paging%.page a:contains(下一页)|href|null',
+                'collect_image_attribute' => 'src',
+                'collect_remove_head' => '2',
                 'collect_charset' => 'utf-8',
                 'created_at' => current_time('mysql'),
                 'updated_at' => current_time('mysql'),
